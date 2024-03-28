@@ -138,6 +138,7 @@ class Transformer:
             else:
                 img, emb = self.transforms[transform](img)
             embeddings.extend(emb)
+        orig = self.tensor_transform(orig) 
         img = self.tensor_transform(img)
         embeddings = torch.FloatTensor(embeddings)
         return orig, img, embeddings
