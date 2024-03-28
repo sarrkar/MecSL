@@ -92,7 +92,7 @@ class ColorJitterTransform(Transform):
             brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
         return transform(img), [brightness, contrast, saturation, hue]
 
-    def default(self):
+    def default(self, **kwargs):
         return [1.0, 1.0, 1.0, 0.0]
 
 
