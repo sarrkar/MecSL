@@ -89,7 +89,11 @@ class ColorJitterTransform(Transform):
         hue = kwargs.get('hue', 0.2)
         hue = random.uniform(-hue, hue)
         transform = ColorJitter(
-            brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
+            brightness=(brightness, brightness),
+            contrast=(contrast, contrast),
+            saturation=(saturation, saturation),
+            hue=(hue, hue)
+        )
         return transform(img), [brightness, contrast, saturation, hue]
 
     def default(self, **kwargs):
@@ -110,11 +114,12 @@ class Transformer:
             grayscale_prob=0.2,
     ):
         self.transforms = {
-            'color_jitter': ColorJitterTransform(color_jitter_prob), #4
-            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob), #1
-            'vertical_flip': VerticalFlipTransform(vertical_flip_prob), #1
-            'rotation': RotationTransform(rotation_prob), #1
-            'grayscale': GrayscaleTransform(grayscale_prob), #1
+            'color_jitter': ColorJitterTransform(color_jitter_prob),  # 4
+            # 1
+            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob),
+            'vertical_flip': VerticalFlipTransform(vertical_flip_prob),  # 1
+            'rotation': RotationTransform(rotation_prob),  # 1
+            'grayscale': GrayscaleTransform(grayscale_prob),  # 1
         }
         self.tensor_transform = ToTensor()
         self.cj_kwargs = {
