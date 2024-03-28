@@ -47,7 +47,7 @@ class SimCLRTrainer:
             dataset=get_cifar10,
             classifier=LinearClassifier,
             evaluation=Top1,
-            unsupervised_epochs=30,
+            unsupervised_epochs=15,
             supervised_epochs=30,
             unsupervised_lr=0.01,
             supervised_lr=0.01,
