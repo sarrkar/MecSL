@@ -25,7 +25,7 @@ class Transform:
 class GrayscaleTransform(Transform):
     def __init__(self, prob):
         super().__init__(prob)
-        self.transform = RandomGrayscale(prob=1.0)
+        self.transform = RandomGrayscale(p=1.0)
 
     def forward(self, img):
         return self.transform(img), [1.0]
@@ -37,7 +37,7 @@ class GrayscaleTransform(Transform):
 class HorizontalFlipTransform(Transform):
     def __init__(self, prob):
         super().__init__(prob)
-        self.transform = RandomHorizontalFlip(prob=1.0)
+        self.transform = RandomHorizontalFlip(p=1.0)
 
     def forward(self, img):
         return self.transform(img), [1.0]
@@ -49,7 +49,7 @@ class HorizontalFlipTransform(Transform):
 class VerticalFlipTransform(Transform):
     def __init__(self, prob):
         super().__init__(prob)
-        self.transform = RandomVerticalFlip(prob=1.0)
+        self.transform = RandomVerticalFlip(p=1.0)
 
     def forward(self, img):
         return self.transform(img), [1.0]
@@ -62,9 +62,9 @@ class RotationTransform(Transform):
     def __init__(self, prob):
         super().__init__(prob)
         self.transforms = {
-            1: RandomRotation(degrees=90),
-            2: RandomRotation(degrees=180),
-            3: RandomRotation(degrees=270),
+            1: RandomRotation(degrees=(90, 90)),
+            2: RandomRotation(degrees=(180, 180)),
+            3: RandomRotation(degrees=(270, 270)),
         }
 
     def forward(self, img):
