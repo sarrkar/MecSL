@@ -89,5 +89,4 @@ class SupervisedTrainer:
                 logits = self.classifier(x)
                 self.evaluation.add(
                     y.cpu().numpy(), logits.argmax(dim=1).cpu().numpy())
-                pbar.set_description(f'EPOCH {self.epochs} - Testing ...')
         return self.evaluation.evaluate()

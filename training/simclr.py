@@ -47,7 +47,7 @@ class SimCLRTrainer:
             dataset=get_cifar10,
             classifier=LinearClassifier,
             evaluation=Top1,
-            unsupervised_epochs=10,
+            unsupervised_epochs=30,
             supervised_epochs=30,
             unsupervised_lr=0.01,
             supervised_lr=0.01,
@@ -59,7 +59,7 @@ class SimCLRTrainer:
         self.device = torch.device(device)
 
         transform = transforms.SimCLRTransform(input_size=32, cj_prob=0.5)
-        self.unsupervised_dataset_train, self.unsupervised_test_dataset = dataset(
+        self.unsupervised_dataset_train, _ = dataset(
             transform)
         self.unsupervised_train_dataloader = DataLoader(
             self.unsupervised_dataset_train, batch_size=batch_size, shuffle=True)
@@ -97,7 +97,7 @@ class SimCLRTrainer:
             for (x1, x2), _ in pbar:
                 x1, x2 = x1.to(self.device), x2.to(self.device)
                 z1 = self.feature_extractor(x1)
-                z2 = self.feature_extractor(x1)
+                z2 = self.feature_extractor(x2)
                 loss = self.unsupervised_criterion(z1, z2)
                 self.unsupervised_optimizer.zero_grad()
                 loss.backward()
@@ -133,12 +133,11 @@ class SimCLRTrainer:
     def test(self):
         self.classifier.eval()
         with torch.no_grad():
-            pbar = tqdm(self.test_dataloader)
+            pbar = tqdm(self.supervised_test_dataloader)
             for x, y in pbar:
                 x, y = x.to(self.device), y.to(self.device)
                 features = self.feature_extractor(x)
                 logits = self.classifier(features)
                 self.evaluation.add(
                     y.cpu().numpy(), logits.argmax(dim=1).cpu().numpy())
-                pbar.set_description(f'EPOCH {self.epochs} - Testing ...')
         return self.evaluation.evaluate()
