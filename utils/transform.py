@@ -1,3 +1,4 @@
+import copy
 import random
 
 import torch
@@ -109,11 +110,11 @@ class Transformer:
             grayscale_prob=0.2,
     ):
         self.transforms = {
-            'color_jitter': ColorJitterTransform(color_jitter_prob),
-            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob),
-            'vertical_flip': VerticalFlipTransform(vertical_flip_prob),
-            'rotation': RotationTransform(rotation_prob),
-            'grayscale': GrayscaleTransform(grayscale_prob),
+            'color_jitter': ColorJitterTransform(color_jitter_prob), #4
+            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob), #1
+            'vertical_flip': VerticalFlipTransform(vertical_flip_prob), #1
+            'rotation': RotationTransform(rotation_prob), #1
+            'grayscale': GrayscaleTransform(grayscale_prob), #1
         }
         self.tensor_transform = ToTensor()
         self.cj_kwargs = {
@@ -124,6 +125,7 @@ class Transformer:
         }
 
     def __call__(self, img):
+        orig = copy.deepcopy(img)
         embeddings = []
         for transform in self.transforms:
             if transform == 'color_jitter':
@@ -133,4 +135,4 @@ class Transformer:
             embeddings.extend(emb)
         img = self.tensor_transform(img)
         embeddings = torch.FloatTensor(embeddings)
-        return img, embeddings
+        return orig, img, embeddings
