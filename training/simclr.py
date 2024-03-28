@@ -49,7 +49,8 @@ class SimCLRTrainer:
             evaluation=Top1,
             unsupervised_epochs=10,
             supervised_epochs=30,
-            lr=0.01,
+            unsupervised_lr=0.01,
+            supervised_lr=0.01,
             batch_size=128,
             device='cuda'
     ):
@@ -58,7 +59,8 @@ class SimCLRTrainer:
         self.device = torch.device(device)
 
         transform = transforms.SimCLRTransform(input_size=32, cj_prob=0.5)
-        self.unsupervised_dataset_train, self.unsupervised_test_dataset = dataset(transform)
+        self.unsupervised_dataset_train, self.unsupervised_test_dataset = dataset(
+            transform)
         self.unsupervised_train_dataloader = DataLoader(
             self.unsupervised_dataset_train, batch_size=batch_size, shuffle=True)
         self.supervised_dataset_train, self.supervised_test_dataset = dataset()
@@ -69,14 +71,18 @@ class SimCLRTrainer:
 
         self.feature_extractor = SimCLRFeatureExtractor(
             backbone).to(self.device)
-        self.unsupervised_optimizer = torch.optim.SGD(
-            self.feature_extractor.parameters(), lr=0.1, weight_decay=1e-6)
+        self.unsupervised_optimizer = torch.optim.Adam(
+            self.feature_extractor.parameters(), lr=unsupervised_lr, weight_decay=1e-6)
+        self.unsupervised_scheduler = ReduceLROnPlateau(
+            self.unsupervised_optimizer, 'min', patience=250, factor=0.5)
         self.unsupervised_criterion = loss.NTXentLoss(temperature=0.5)
 
         self.classifier = classifier(
-            self.feature_extractor.backbone.output_size, len(self.dataset_train.classes)).to(self.device)
+            self.feature_extractor.backbone.output_size,
+            len(self.supervised_dataset_train.classes)
+        ).to(self.device)
         self.supervised_optimizer = torch.optim.Adam(
-            self.classifier.parameters(), lr=lr)
+            self.classifier.parameters(), lr=supervised_lr)
         self.supervised_scheduler = ReduceLROnPlateau(
             self.supervised_optimizer, 'min', patience=250, factor=0.5)
         self.supervised_criterion = torch.nn.CrossEntropyLoss()
@@ -88,7 +94,7 @@ class SimCLRTrainer:
         for epoch in trange(self.unsupervised_epochs):
             losses = []
             pbar = tqdm(self.unsupervised_train_dataloader)
-            for (x1, x2) , _ in pbar:
+            for (x1, x2), _ in pbar:
                 x1, x2 = x1.to(self.device), x2.to(self.device)
                 z1 = self.feature_extractor(x1)
                 z2 = self.feature_extractor(x1)
@@ -96,10 +102,11 @@ class SimCLRTrainer:
                 self.unsupervised_optimizer.zero_grad()
                 loss.backward()
                 self.unsupervised_optimizer.step()
+                self.unsupervised_scheduler.step(loss)
                 losses.append(loss.item())
                 pbar.set_description(
                     f'EPOCH {epoch + 1} - LOSS {np.mean(losses):.4f}')
-        
+
         self.feature_extractor = self.feature_extractor.backbone
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
