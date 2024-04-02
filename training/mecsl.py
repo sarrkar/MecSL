@@ -1,6 +1,6 @@
 from model.resnet import ResNet34
 from model.mlp import LinearClassifier, MLP
-from datasets.cifar import get_cifar10
+from datasets.cifar import get_cifar10, NORMALIZATION as CIFAR10_NORMALIZE
 from evaluation.top1 import Top1
 from utils.transform import Transformer
 
@@ -50,6 +50,7 @@ class MecSLTrainer:
             self,
             backbone=ResNet34,
             dataset=get_cifar10,
+            normalize=CIFAR10_NORMALIZE,
             classifier=LinearClassifier,
             evaluation=Top1,
             unsupervised_epochs=15,
@@ -63,9 +64,8 @@ class MecSLTrainer:
         self.supervised_epochs = supervised_epochs
         self.device = torch.device(device)
 
-        transform = Transformer()
-        self.unsupervised_dataset_train, _ = dataset(
-            transform)
+        transform = Transformer(normalize=normalize)
+        self.unsupervised_dataset_train, _ = dataset(transform)
         self.unsupervised_train_dataloader = DataLoader(
             self.unsupervised_dataset_train, batch_size=batch_size, shuffle=True)
         self.supervised_dataset_train, self.supervised_test_dataset = dataset()

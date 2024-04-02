@@ -1,6 +1,6 @@
 from model.resnet import ResNet34
 from model.mlp import LinearClassifier
-from datasets.cifar import get_cifar10
+from datasets.cifar import get_cifar10, NORMALIZATION as CIFAR10_NORMALIZE
 from evaluation.top1 import Top1
 
 import numpy as np
@@ -45,6 +45,7 @@ class SimCLRTrainer:
             self,
             backbone=ResNet34,
             dataset=get_cifar10,
+            normalize=CIFAR10_NORMALIZE,
             classifier=LinearClassifier,
             evaluation=Top1,
             unsupervised_epochs=15,
@@ -58,9 +59,12 @@ class SimCLRTrainer:
         self.supervised_epochs = supervised_epochs
         self.device = torch.device(device)
 
-        transform = transforms.SimCLRTransform(input_size=32, cj_prob=0.5)
-        self.unsupervised_dataset_train, _ = dataset(
-            transform)
+        transform = transforms.SimCLRTransform(
+            input_size=32,
+            cj_prob=0.5,
+            normalize=normalize,
+        )
+        self.unsupervised_dataset_train, _ = dataset(transform)
         self.unsupervised_train_dataloader = DataLoader(
             self.unsupervised_dataset_train, batch_size=batch_size, shuffle=True)
         self.supervised_dataset_train, self.supervised_test_dataset = dataset()

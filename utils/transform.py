@@ -3,7 +3,7 @@ import random
 
 import torch
 
-from torchvision.transforms import ColorJitter, RandomHorizontalFlip, RandomVerticalFlip, RandomGrayscale, RandomRotation, ToTensor
+from torchvision.transforms import ColorJitter, RandomHorizontalFlip, RandomVerticalFlip, RandomGrayscale, RandomRotation, ToTensor, Normalize, Compose
 
 
 class Transform:
@@ -112,16 +112,22 @@ class Transformer:
             vertical_flip_prob=0.0,
             rotation_prob=0.0,
             grayscale_prob=0.2,
+            normalize=None,
     ):
         self.transforms = {
             'color_jitter': ColorJitterTransform(color_jitter_prob),  # 4
-            # 1
-            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob),
+            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob), # 1
             'vertical_flip': VerticalFlipTransform(vertical_flip_prob),  # 1
             'rotation': RotationTransform(rotation_prob),  # 1
             'grayscale': GrayscaleTransform(grayscale_prob),  # 1
         }
-        self.tensor_transform = ToTensor()
+        if normalize is None:
+            self.tensor_transform = ToTensor()
+        else:
+            self.tensor_transform = Compose([
+                Normalize(normalize["mean"], normalize["std"]),
+                ToTensor(),
+            ])
         self.cj_kwargs = {
             'brightness': color_jitter_brightness,
             'contrast': color_jitter_contrast,
