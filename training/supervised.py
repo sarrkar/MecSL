@@ -1,7 +1,7 @@
-from model.resnet import ResNet34
-from model.mlp import LinearClassifier
-from datasets.cifar import get_cifar10
-from evaluation.top1 import Top1
+from mecsl.model.resnet import ResNet50
+from mecsl.model.mlp import LinearClassifier
+from mecsl.datasets.cifar import get_cifar10
+from mecsl.evaluation.top1 import Top1
 
 import numpy as np
 
@@ -19,7 +19,7 @@ class SupervisedClassifier(nn.Module):
     def __init__(
             self,
             num_classes,
-            backbone=ResNet34,
+            backbone=ResNet50,
             classifier=LinearClassifier,
     ):
         super(SupervisedClassifier, self).__init__()
@@ -35,7 +35,7 @@ class SupervisedClassifier(nn.Module):
 class SupervisedTrainer:
     def __init__(
             self,
-            backbone=ResNet34,
+            backbone=ResNet50,
             dataset=get_cifar10,
             classifier=LinearClassifier,
             evaluation=Top1,

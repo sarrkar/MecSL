@@ -2,7 +2,7 @@ from mecsl.model.resnet import ResNet50
 from mecsl.model.mlp import LinearClassifier, MLP
 from mecsl.datasets.cifar import get_cifar10, NORMALIZATION as CIFAR10_NORMALIZE
 from mecsl.evaluation.top1 import Top1
-from mecsl.utils.transform import Transformer
+from mecsl.utils.transform_text import TransformerText
 
 import numpy as np
 
@@ -13,17 +13,20 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from transformers import BertModel, AutoTokenizer
+
 from lightly import loss
 from lightly.models.modules import heads
 
 
-class MecSLFeatureExtractor(nn.Module):
+class TMecSLFeatureExtractor(nn.Module):
     def __init__(
             self,
             backbone=ResNet50,
-            embedding_size=8,
+            embedding_size=768,
+            bert_model_name='google-bert/bert-base-uncased'
     ):
-        super(MecSLFeatureExtractor, self).__init__()
+        super(TMecSLFeatureExtractor, self).__init__()
         self.backbone = backbone()
         self.projection_head = heads.SimCLRProjectionHead(
             input_dim=self.backbone.output_size,
@@ -32,17 +35,23 @@ class MecSLFeatureExtractor(nn.Module):
         )
         self.mechanism = MLP(self.backbone.output_size + embedding_size, self.backbone.output_size)
         self.output_size = 128
+        self.bert_tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
+        self.bert_model = BertModel.from_pretrained(bert_model_name)
+
 
     def forward(self, x1, x2, emb):
         z1 = self.backbone(x1)
         z2 = self.backbone(x2)
-        zm1 = self.mechanism(torch.cat([z1, emb], dim=1))
+        with torch.no_grad():
+            inputs = self.bert_tokenizer(emb, return_tensors="pt", padding='max_length', max_length=128, truncation=True).to(self.bert_model.device)
+            last_hidden_states = self.bert_model(**inputs).last_hidden_state[:, 0, :].reshape(x1.shape[0], -1)
+        zm1 = self.mechanism(torch.cat([z1, last_hidden_states], dim=1))
         y1 = self.projection_head(zm1)
         y2 = self.projection_head(z2)
         return y1, y2
 
 
-class MecSLTrainer:
+class TMecSLTrainer:
     def __init__(
             self,
             backbone=ResNet50,
@@ -61,7 +70,7 @@ class MecSLTrainer:
         self.supervised_epochs = supervised_epochs
         self.device = torch.device(device)
 
-        transform = Transformer(normalize=normalize)
+        transform = TransformerText(normalize=normalize)
         self.unsupervised_dataset_train, _ = dataset(transform)
         self.unsupervised_train_dataloader = DataLoader(
             self.unsupervised_dataset_train, batch_size=batch_size, shuffle=True)
@@ -71,7 +80,7 @@ class MecSLTrainer:
         self.supervised_test_dataloader = DataLoader(
             self.supervised_test_dataset, batch_size=batch_size, shuffle=False)
 
-        self.feature_extractor = MecSLFeatureExtractor(
+        self.feature_extractor = TMecSLFeatureExtractor(
             backbone).to(self.device)
         self.unsupervised_optimizer = torch.optim.Adam(
             self.feature_extractor.parameters(), lr=unsupervised_lr, weight_decay=1e-6)
@@ -97,7 +106,7 @@ class MecSLTrainer:
             losses = []
             pbar = tqdm(self.unsupervised_train_dataloader)
             for (x1, x2, emb), _ in pbar:
-                x1, x2, emb = x1.to(self.device), x2.to(self.device), emb.to(self.device)
+                x1, x2 = x1.to(self.device), x2.to(self.device)
                 z1, z2 = self.feature_extractor(x1, x2, emb)
                 loss = self.unsupervised_criterion(z1, z2)
                 self.unsupervised_optimizer.zero_grad()

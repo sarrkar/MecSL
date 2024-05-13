@@ -1,13 +1,11 @@
-from model.resnet import ResNet34
-from model.mlp import LinearClassifier
-from datasets.cifar import get_cifar10, NORMALIZATION as CIFAR10_NORMALIZE
-from evaluation.top1 import Top1
+from mecsl.model.resnet import ResNet50
+from mecsl.model.mlp import LinearClassifier
+from mecsl.datasets.cifar import get_cifar10, NORMALIZATION as CIFAR10_NORMALIZE
+from mecsl.evaluation.top1 import Top1
 
 import numpy as np
 
 from tqdm.auto import tqdm, trange
-
-from torchvision.transforms import ToTensor
 
 import torch
 from torch import nn
@@ -16,14 +14,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from lightly import loss
 from lightly import transforms
-from lightly.data import LightlyDataset
 from lightly.models.modules import heads
 
 
 class SimCLRFeatureExtractor(nn.Module):
     def __init__(
             self,
-            backbone=ResNet34,
+            backbone=ResNet50,
     ):
         super(SimCLRFeatureExtractor, self).__init__()
         self.backbone = backbone()
@@ -43,7 +40,7 @@ class SimCLRFeatureExtractor(nn.Module):
 class SimCLRTrainer:
     def __init__(
             self,
-            backbone=ResNet34,
+            backbone=ResNet50,
             dataset=get_cifar10,
             normalize=CIFAR10_NORMALIZE,
             classifier=LinearClassifier,

@@ -1,63 +1,48 @@
 import copy
 import random
 
-import torch
 from torchvision.transforms import ColorJitter, RandomHorizontalFlip, RandomVerticalFlip, RandomGrayscale, RandomRotation, ToTensor, Normalize, Compose
 
-
-class Transform:
-    def __init__(self, prob):
-        self.prob = prob
-
-    def forward(self, img):
-        raise NotImplementedError
-
-    def default(self, *kwargs):
-        raise NotImplementedError
-
-    def __call__(self, img, **kwargs):
-        if random.random() < self.prob:
-            return self.forward(img, **kwargs)
-        return img, self.default(**kwargs)
+from mecsl.utils.transform import Transform
 
 
-class GrayscaleTransform(Transform):
+class GrayscaleTransformText(Transform):
     def __init__(self, prob):
         super().__init__(prob)
         self.transform = RandomGrayscale(p=1.0)
 
     def forward(self, img):
-        return self.transform(img), [1.0]
+        return self.transform(img), 'grayscale'
 
     def default(self):
-        return [0.0]
+        return 'rgb'
 
 
-class HorizontalFlipTransform(Transform):
+class HorizontalFlipTransformText(Transform):
     def __init__(self, prob):
         super().__init__(prob)
         self.transform = RandomHorizontalFlip(p=1.0)
 
     def forward(self, img):
-        return self.transform(img), [1.0]
+        return self.transform(img), 'horizontal flip'
 
     def default(self):
-        return [0.0]
+        return ''
 
 
-class VerticalFlipTransform(Transform):
+class VerticalFlipTransformText(Transform):
     def __init__(self, prob):
         super().__init__(prob)
         self.transform = RandomVerticalFlip(p=1.0)
 
     def forward(self, img):
-        return self.transform(img), [1.0]
+        return self.transform(img), 'vertical flip'
 
     def default(self):
-        return [0.0]
+        return ''
 
 
-class RotationTransform(Transform):
+class RotationTransformText(Transform):
     def __init__(self, prob):
         super().__init__(prob)
         self.transforms = {
@@ -68,13 +53,13 @@ class RotationTransform(Transform):
 
     def forward(self, img):
         degree = random.randint(1, 3)
-        return self.transforms[degree](img), [float(degree) / 4]
+        return self.transforms[degree](img), f'rotate {90 * degree} degrees'
 
     def default(self):
-        return [0.0]
+        return ''
 
 
-class ColorJitterTransform(Transform):
+class ColorJitterTransformText(Transform):
     def __init__(self, prob):
         super().__init__(prob)
 
@@ -93,13 +78,13 @@ class ColorJitterTransform(Transform):
             saturation=(saturation, saturation),
             hue=(hue, hue)
         )
-        return transform(img), [brightness, contrast, saturation, hue]
+        return transform(img), f'brightness {brightness:.3f}, contrast {contrast:.3f}, saturation {saturation:.3f}, hue {hue:.3f}'
 
     def default(self, **kwargs):
-        return [1.0, 1.0, 1.0, 0.0]
+        return f'brightness 1.0, contrast 1.0, saturation 1.0, hue 0.0'
 
 
-class Transformer:
+class TransformerText:
     def __init__(
             self,
             color_jitter_prob=0.8,
@@ -114,11 +99,11 @@ class Transformer:
             normalize=None,
     ):
         self.transforms = {
-            'color_jitter': ColorJitterTransform(color_jitter_prob),  # 4
-            'horizontal_flip': HorizontalFlipTransform(horizontal_flip_prob), # 1
-            'vertical_flip': VerticalFlipTransform(vertical_flip_prob),  # 1
-            'rotation': RotationTransform(rotation_prob),  # 1
-            'grayscale': GrayscaleTransform(grayscale_prob),  # 1
+            'color_jitter': ColorJitterTransformText(color_jitter_prob),
+            'horizontal_flip': HorizontalFlipTransformText(horizontal_flip_prob),
+            'vertical_flip': VerticalFlipTransformText(vertical_flip_prob),
+            'rotation': RotationTransformText(rotation_prob),
+            'grayscale': GrayscaleTransformText(grayscale_prob),
         }
         if normalize is None:
             self.tensor_transform = ToTensor()
@@ -136,14 +121,13 @@ class Transformer:
 
     def __call__(self, img):
         orig = copy.deepcopy(img)
-        embeddings = []
+        embeddings = 'image'
         for transform in self.transforms:
             if transform == 'color_jitter':
                 img, emb = self.transforms[transform](img, **self.cj_kwargs)
             else:
                 img, emb = self.transforms[transform](img)
-            embeddings.extend(emb)
+            embeddings = embeddings + ', ' + emb
         orig = self.tensor_transform(orig) 
         img = self.tensor_transform(img)
-        embeddings = torch.FloatTensor(embeddings)
         return orig, img, embeddings
